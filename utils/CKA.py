@@ -77,7 +77,7 @@ def HSIC(K, L):
         return (np.trace(final_mat))  # /(n-1)**2)
 
 
-def CKA_net_computation(network, dataset, cbf=True, sigma=1, verbose=False):
+def CKA_net_computation(network, dataset, cbf=True, sigma=1, verbose=False, fast_computation = False, iteration_limit = 10):
     """
     Returns the CKA matrix for the input networks, thanks to the Google algorithms.
 
@@ -85,6 +85,7 @@ def CKA_net_computation(network, dataset, cbf=True, sigma=1, verbose=False):
 
     cbf: Whether or not to use RBF kernel
     sigma: which sigma to use for the RBF kernel
+    fast_computation: take only "iteration_limit" batchs for early results
     """
 
     #network = network.cpu()
@@ -112,21 +113,39 @@ def CKA_net_computation(network, dataset, cbf=True, sigma=1, verbose=False):
     return_matrix = torch.zeros((n, n))
 
     # Dataset pass
-    iteration = 0
-    for batch, _ in dataset:
-        iteration += 1
-        network(batch)
+    if(fast_computation):
+        iteration = 0
+        for batch, _ in dataset:
+            if(iteration<iteration_limit):
+                iteration += 1
+                network(batch)
+                for i in range(n):
+                    for j in range(i+1):
+                        # print(hook_value[i])
+                        temp = CKA(hook_value[i], hook_value[j],
+                                   cbf, sigma, verbose)/iteration_limit
+                        return_matrix[i][j] += temp
+                        del temp
+                print("Done: {:.2f}".format(100*(iteration/(iteration_limit))), end='\r')
         for i in range(n):
-            for j in range(i+1):
-                # print(hook_value[i])
-                temp = CKA(hook_value[i], hook_value[j],
-                           cbf, sigma, verbose)/len(dataset)
-                return_matrix[i][j] += temp
-                del temp
-        print("Done: {}".format(100*(iteration/(len(dataset)+1))), end='\r')
-    for i in range(n):
-        for j in range(i, n):
-            return_matrix[i, j] = return_matrix[j, i]
+            for j in range(i, n):
+                return_matrix[i, j] = return_matrix[j, i]
+    else:
+        iteration = 0
+        for batch, _ in dataset:
+            iteration += 1
+            network(batch)
+            for i in range(n):
+                for j in range(i+1):
+                    # print(hook_value[i])
+                    temp = CKA(hook_value[i], hook_value[j],
+                               cbf, sigma, verbose)/len(dataset)
+                    return_matrix[i][j] += temp
+                    del temp
+            print("Done: {:.2f}".format(100*(iteration/(len(dataset)+1))), end='\r')
+        for i in range(n):
+            for j in range(i, n):
+                return_matrix[i, j] = return_matrix[j, i]
 
     return return_matrix
 
