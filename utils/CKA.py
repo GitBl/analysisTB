@@ -87,8 +87,8 @@ def CKA_net_computation(network, dataset, cbf=True, sigma=1, verbose=False, fast
     sigma: which sigma to use for the RBF kernel
     fast_computation: take only "iteration_limit" batchs for early results
     """
-
-    #network = network.cpu()
+    if (next(network.parameters()).is_cuda): #CUDA Trick
+        network = network.cpu()
 
     linking_list = []
 

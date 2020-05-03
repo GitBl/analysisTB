@@ -10,4 +10,4 @@ This is a toolbox to reproduce the various experiments conducted in the paper. M
 
 A code for network comparaison can be found [here](ResNetComparison.ipynb).
 
-You can watch CKA application to neural neutworks [here](CKAComputation.ipynb)
+You can watch CKA application to neural networks [here](CKAComputation.ipynb).
