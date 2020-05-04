@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
+import torch
 
 
 def plot_specific_weight(curr_list, value):
@@ -97,10 +98,17 @@ def LRVarshow(var_range, lr_range, out_val_list, epoch_number=None, model_name=N
 
 
 def CKAmatshow(matrix):
+    if (type(matrix) == torch.Tensor):
+        matrix = matrix.detach().numpy()
     fig = plt.figure()
     ax = fig.add_subplot(111)
     cax = ax.matshow(matrix)
-    fig.colorbar(cax)
+    ax.set_xlabel("Layer n°")
+    ax.xaxis.set_ticks_position('bottom')
+    ax.set_ylabel("Layer n°")
+    
+    cbar = fig.colorbar(cax)
+    cbar.set_label("CKA value between layer")
     plt.show()
 
 
