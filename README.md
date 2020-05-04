@@ -10,4 +10,6 @@ This is a toolbox to reproduce the various experiments conducted in the paper. M
 
 A code for network comparaison can be found [here](ResNetComparison.ipynb).
 
+Gradient Extension performed in the paper is demonstrated [here](GradientExtensionAnalysis.ipynb).
+
 You can watch CKA application to neural networks [here](CKAComputation.ipynb).

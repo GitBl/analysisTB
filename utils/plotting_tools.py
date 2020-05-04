@@ -31,22 +31,33 @@ def weight_reporter(net):
 def comparaison_plot(out, label_list=None, name_list=None, NB_EPOCH=1, plot_text=""):
     """
     Plot the result of the comparaison of two networks
+    
+    Currently flawed as it expects the user to know the specifics of the input to plot.
     """
     plt.style.use("ggplot")
 
     for i in range(len(out)):
-        plt.figure()
-        if(label_list):
+        if(type(out[i][0][0]) == list):
+            for j in range(len(out[i][0])):
+                plt.figure()
+                plt.plot(out[i][0][j], label = name_list[0])
+                plt.plot(out[i][1][j], label = name_list[0])
+                plt.title(label_list[i]+" " + plot_text)
+                plt.ylabel(label_list[i])
+                plt.legend()
+                plt.show()
+        else:
+            plt.figure()
+            if(label_list):
+                epoch_list = np.linspace(0, NB_EPOCH, len(out[i][0]))
 
-            epoch_list = np.linspace(0, NB_EPOCH, len(out[i][0]))
-
-            plt.plot(epoch_list, out[i][0], label=name_list[0])
-            plt.plot(epoch_list, out[i][1], label=name_list[1])
-        plt.title(label_list[i]+" " + plot_text)
-        plt.xlabel("Epochs")
-        plt.ylabel(label_list[i])
-        plt.legend()
-        plt.show()
+                plt.plot(epoch_list, out[i][0], label=name_list[0])
+                plt.plot(epoch_list, out[i][1], label=name_list[1])
+            plt.title(label_list[i]+" " + plot_text)
+            plt.xlabel("Epochs")
+            plt.ylabel(label_list[i])
+            plt.legend()
+            plt.show()
 
 
 def bias_inspector(net, return_name=False):

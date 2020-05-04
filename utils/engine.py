@@ -236,6 +236,10 @@ def shooting_star(net, train_loader, ratio=1, gradient_step_range=10, LEARNING_R
     Project the gradient over several steps, allowing to "see" the loss space over several iterations
     """
     new_net = copy.deepcopy(net)
+    
+    if(torch.cuda.is_available()):
+        new_net.cuda()
+    
     new_optim = torch.optim.SGD(new_net.parameters(), LEARNING_RATE / ratio)
 
     i, data = next(enumerate(train_loader))
@@ -249,10 +253,13 @@ def shooting_star(net, train_loader, ratio=1, gradient_step_range=10, LEARNING_R
     loss.backward()
 
     loss_list = []
-
+    
     for i in range(int(ratio * gradient_step_range) + 1):
+        print("Entering gradient extension step: {}/{}".format(i+1, ratio * gradient_step_range))
         loop_loss_list = []
         for iter_nb, data in enumerate(train_loader):
+            if(int(5*iter_nb/len(train_loader)) != int(5*(iter_nb+1)/len(train_loader)) or iter_nb == len(train_loader)-1):
+                print("Gradient step: {}, current progression {:.2f}".format(i+1, (iter_nb+1)/len(train_loader)), end = "\r")
             image = data[0].type(torch.FloatTensor).cuda()
             label = data[1].type(torch.LongTensor).cuda()
 
@@ -262,6 +269,8 @@ def shooting_star(net, train_loader, ratio=1, gradient_step_range=10, LEARNING_R
             loop_loss_list.append(loss.data.item())
         loss_list.append(np.mean(loop_loss_list))
         new_optim.step()
+        
+        print("                                           ",end = "\r")
     return loss_list
 
 
