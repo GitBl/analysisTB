@@ -446,7 +446,7 @@ def resnet_compare(
                 X, Y, GSmap_2, cmap=cm.get_cmap("bwr"), alpha=0.5)
             fig_2.show()
 
-        if (j == 1 and shift_try):
+        if (j == 0 and shift_try):
             for module in model_2.modules():
                 if(hasattr(module, "in_channels") and hasattr(module, "out_channels")):
                     if(module.in_channels == module.out_channels):
