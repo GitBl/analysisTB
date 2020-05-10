@@ -236,10 +236,10 @@ def shooting_star(net, train_loader, ratio=1, gradient_step_range=10, LEARNING_R
     Project the gradient over several steps, allowing to "see" the loss space over several iterations
     """
     new_net = copy.deepcopy(net)
-    
+
     if(torch.cuda.is_available()):
         new_net.cuda()
-    
+
     new_optim = torch.optim.SGD(new_net.parameters(), LEARNING_RATE / ratio)
 
     i, data = next(enumerate(train_loader))
@@ -253,13 +253,15 @@ def shooting_star(net, train_loader, ratio=1, gradient_step_range=10, LEARNING_R
     loss.backward()
 
     loss_list = []
-    
+
     for i in range(int(ratio * gradient_step_range) + 1):
-        print("Entering gradient extension step: {}/{}".format(i+1, ratio * gradient_step_range))
+        print("Entering gradient extension step: {}/{}".format(i +
+                                                               1, ratio * gradient_step_range))
         loop_loss_list = []
         for iter_nb, data in enumerate(train_loader):
             if(int(5*iter_nb/len(train_loader)) != int(5*(iter_nb+1)/len(train_loader)) or iter_nb == len(train_loader)-1):
-                print("Gradient step: {}, current progression {:.2f}".format(i+1, (iter_nb+1)/len(train_loader)), end = "\r")
+                print("Gradient step: {}, current progression {:.2f}".format(
+                    i+1, (iter_nb+1)/len(train_loader)), end="\r")
             image = data[0].type(torch.FloatTensor).cuda()
             label = data[1].type(torch.LongTensor).cuda()
 
@@ -269,8 +271,8 @@ def shooting_star(net, train_loader, ratio=1, gradient_step_range=10, LEARNING_R
             loop_loss_list.append(loss.data.item())
         loss_list.append(np.mean(loop_loss_list))
         new_optim.step()
-        
-        print("                                           ",end = "\r")
+
+        print("                                           ", end="\r")
     return loss_list
 
 
@@ -295,7 +297,8 @@ def resnet_compare(
         eigenvalues=None,
         eigenvectors=None,
         shift_try=False,
-        shift_range=5):
+        shift_range=5,
+        batch_norm_observation=False):
     """
     Compare the training of two different networks.
     It is a toolbox set for personal research, with many options, which are referenced here.
@@ -369,6 +372,23 @@ def resnet_compare(
     if(gradient_extension):
         gradient_list_1 = []
         gradient_list_2 = []
+
+    if(batch_norm_observation):
+        batch_norm_weight_list_1 = {}
+        batch_norm_weight_list_2 = {}
+
+        batch_norm_diff_list_1 = {}
+        batch_norm_diff_list_2 = {}
+
+        for name, param in test_net.named_parameters():
+            if('bn' in name):
+                batch_norm_weight_list_1[name] = param
+                batch_norm_diff_list_1[name] = []
+
+        for name, param in model_2.named_parameters():
+            if('bn' in name):
+                batch_norm_weight_list_2[name] = param
+                batch_norm_diff_list_2[name] = []
 
     for j in range(nb_epochs):
         print("Starting epoch n°{}".format(j))
@@ -497,6 +517,19 @@ def resnet_compare(
                     eigenvalue_diff_list_2.append(
                         eigenvalue_observer(model_2, eigenvalues, eigenvectors))
 
+                if(batch_norm_observation):
+                    current_dict_1 = BNweightreporter(test_net)
+                    current_dict_2 = BNweightreporter(model_2)
+                    for key in current_dict_1:
+
+                        batch_norm_diff_list_1[key].append(torch.norm(
+                            batch_norm_weight_list_1[key] - current_dict_1[key]))
+                        batch_norm_diff_list_2[key].append(torch.norm(
+                            batch_norm_weight_list_2[key] - current_dict_2[key]))
+
+                        batch_norm_weight_list_1[key] = current_dict_1[key]
+                        batch_norm_weight_list_2[key] = current_dict_2[key]
+
                 if(bias_inspector_report):  # This part causes huge GPU memory leaks
 
                     #init_mem_state = torch.cuda.memory_allocated()
@@ -566,24 +599,37 @@ def resnet_compare(
 
         print("Ending epoch n°{}".format(j))
 
-        return_list = [[score_list, score_list_2], [loss_list, loss_list_2]]
+        return_dict = {}
+
+        return_dict["Score"] = [score_list, score_list_2]
+        return_dict["Loss"] = [loss_list, loss_list_2]
+
+        return_dict["Epoch_nb"] = nb_epochs
+        return_dict["PPE"] = points_per_epochs
 
         if(gradient_scale_plot):
-            return_list.append([gradient_scale_list_1, gradient_scale_list_2])
+            return_dict["Gradient Scale"] = [
+                gradient_scale_list_1, gradient_scale_list_2]
 
         if(bias_inspector_report):
-            return_list.append(
-                [bias_score_evolution_1, bias_score_evolution_2])
-            return_list.append(
-                [overall_score_evolution_1, overall_score_evolution_2])
+            return_dict["Bias Score"] = [
+                bias_score_evolution_1, bias_score_evolution_2]
+            return_dict["Overall Score"] = [
+                overall_score_evolution_1, overall_score_evolution_2]
 
         if(eigenvalues_inspector):
-            return_list.append(
-                [eigenvalue_diff_list_1, eigenvalue_diff_list_2])
+            return_dict["EigenValue diff"] = [
+                eigenvalue_diff_list_1, eigenvalue_diff_list_2]
         if(gradient_extension):
-            return_list.append(
-                [gradient_list_1, gradient_list_2])
-    return return_list
+            return_dict["Gradient extension plot"] = [
+                gradient_list_1, gradient_list_2]
+            return_dict["Gradient Scale Parameters"] = {
+                "gradient_ratio": gradient_ratio, "gradient_range": gradient_range}
+
+        if(batch_norm_observation):
+            return_dict["BatchNorm"] = [
+                batch_norm_diff_list_1, batch_norm_diff_list_2]
+    return return_dict
 
 
 def train_and_test(
@@ -910,3 +956,11 @@ def deactivate_batchnorm(m):
         with torch.no_grad():
             m.weight.fill_(1.0)
             m.bias.zero_()
+
+
+def BNweightreporter(network):
+    return_dict = {}
+    for name, weight in network.named_parameters():
+        if("bn" in name):
+            return_dict[name] = copy.deepcopy(weight)
+    return return_dict

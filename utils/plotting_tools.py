@@ -28,36 +28,63 @@ def weight_reporter(net):
         plot_specific_weight(param_list, i)
 
 
-def comparaison_plot(out, label_list=None, name_list=None, NB_EPOCH=1, plot_text=""):
+def comparaison_plot(out, name_list=None, plot_text=""):
     """
     Plot the result of the comparaison of two networks
-    
-    Currently flawed as it expects the user to know the specifics of the input to plot.
     """
     plt.style.use("ggplot")
+    epoch_nb = out["Epoch_nb"]
+    PPE = out["PPE"]
 
-    for i in range(len(out)):
-        if(type(out[i][0][0]) == list):
-            for j in range(len(out[i][0])):
+    for key in out:
+        curr_val = out[key]
+        if(type(curr_val) == list):
+            if(key == "Loss"):
                 plt.figure()
-                plt.plot(out[i][0][j], label = name_list[0])
-                plt.plot(out[i][1][j], label = name_list[0])
-                plt.title(label_list[i]+" " + plot_text)
-                plt.ylabel(label_list[i])
+                epoch_list = np.linspace(0, epoch_nb, PPE * epoch_nb)
+                plt.plot(epoch_list, curr_val[0], label=name_list[0])
+                plt.plot(epoch_list, curr_val[1], label=name_list[1])
+                plt.title("Loss " + plot_text)
+                plt.xlabel("Epochs")
+                plt.ylabel("Loss value")
                 plt.legend()
                 plt.show()
-        else:
-            plt.figure()
-            if(label_list):
-                epoch_list = np.linspace(0, NB_EPOCH, len(out[i][0]))
+            if(key == "Score"):
+                plt.figure()
+                epoch_list = np.linspace(0, epoch_nb, PPE * epoch_nb)
+                plt.plot(epoch_list, curr_val[0], label=name_list[0])
+                plt.plot(epoch_list, curr_val[1], label=name_list[1])
+                plt.title("Score " + plot_text)
+                plt.xlabel("Epochs")
+                plt.ylabel("Test score")
+                plt.legend()
+                plt.show()
+            if(key == "Gradient extension plot"):
+                grad_range = out["Gradient Scale Parameters"]["gradient_range"]
+                grad_ratio = out["Gradient Scale Parameters"]["gradient_ratio"]
+                grad_extension_x = np.linspace(
+                    0, grad_range+1, (grad_range+1)/grad_ratio)
 
-                plt.plot(epoch_list, out[i][0], label=name_list[0])
-                plt.plot(epoch_list, out[i][1], label=name_list[1])
-            plt.title(label_list[i]+" " + plot_text)
-            plt.xlabel("Epochs")
-            plt.ylabel(label_list[i])
-            plt.legend()
-            plt.show()
+                for epoch in range(len(curr_val[0])):
+                    plt.figure()
+                    plt.plot(grad_extension_x,
+                             curr_val[0][epoch], label=name_list[0])
+                    plt.plot(grad_extension_x,
+                             curr_val[1][epoch], label=name_list[1])
+                    plt.title(
+                        "Gradient extension at the start of epoch: {}".format(epoch))
+                    plt.xlabel(r'$\alpha$')
+                    plt.ylabel("Loss value")
+                    plt.legend()
+                    plt.show()
+            if(key == "BatchNorm"):
+                for sub_key in curr_val[0]:
+                    plt.figure()
+                    plt.plot(curr_val[0][sub_key], label=name_list[0])
+                    plt.plot(curr_val[1][sub_key], label=name_list[1])
+                    plt.title(sub_key)
+                    plt.legend()
+                    plt.show()
 
 
 def bias_inspector(net, return_name=False):
@@ -117,7 +144,7 @@ def CKAmatshow(matrix):
     ax.set_xlabel("Layer n°")
     ax.xaxis.set_ticks_position('bottom')
     ax.set_ylabel("Layer n°")
-    
+
     cbar = fig.colorbar(cax)
     cbar.set_label("CKA value between layer")
     plt.show()

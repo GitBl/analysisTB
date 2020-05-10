@@ -77,7 +77,7 @@ def HSIC(K, L):
         return (np.trace(final_mat))  # /(n-1)**2)
 
 
-def CKA_net_computation(network, dataset, cbf=True, sigma=1, verbose=False, fast_computation = False, iteration_limit = 10):
+def CKA_net_computation(network, dataset, cbf=True, sigma=1, verbose=False, fast_computation=False, iteration_limit=10):
     """
     Returns the CKA matrix for the input networks, thanks to the Google algorithms.
 
@@ -87,7 +87,7 @@ def CKA_net_computation(network, dataset, cbf=True, sigma=1, verbose=False, fast
     sigma: which sigma to use for the RBF kernel
     fast_computation: take only "iteration_limit" batchs for early results
     """
-    if (next(network.parameters()).is_cuda): #CUDA Trick
+    if (next(network.parameters()).is_cuda):  # CUDA Trick
         network = network.cpu()
 
     linking_list = []
@@ -116,7 +116,7 @@ def CKA_net_computation(network, dataset, cbf=True, sigma=1, verbose=False, fast
     if(fast_computation):
         iteration = 0
         for batch, _ in dataset:
-            if(iteration<iteration_limit):
+            if(iteration < iteration_limit):
                 iteration += 1
                 network(batch)
                 for i in range(n):
@@ -126,7 +126,8 @@ def CKA_net_computation(network, dataset, cbf=True, sigma=1, verbose=False, fast
                                    cbf, sigma, verbose)/iteration_limit
                         return_matrix[i][j] += temp
                         del temp
-                print("Done: {:.2f}".format(100*(iteration/(iteration_limit))), end='\r')
+                print("Done: {:.2f}".format(
+                    100*(iteration/(iteration_limit))), end='\r')
         for i in range(n):
             for j in range(i, n):
                 return_matrix[i, j] = return_matrix[j, i]
@@ -142,7 +143,8 @@ def CKA_net_computation(network, dataset, cbf=True, sigma=1, verbose=False, fast
                                cbf, sigma, verbose)/len(dataset)
                     return_matrix[i][j] += temp
                     del temp
-            print("Done: {:.2f}".format(100*(iteration/(len(dataset)+1))), end='\r')
+            print("Done: {:.2f}".format(
+                100*(iteration/(len(dataset)+1))), end='\r')
         for i in range(n):
             for j in range(i, n):
                 return_matrix[i, j] = return_matrix[j, i]
